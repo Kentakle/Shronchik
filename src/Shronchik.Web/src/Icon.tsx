@@ -1,4 +1,4 @@
-export type IconName = 'lock' | 'unlock' | 'settings' | 'video' | 'photo' | 'gif' | 'heart' | 'search' | 'arrow' | 'back' | 'plus' | 'close' | 'menu' | 'shield' | 'grid' | 'history' | 'album' | 'trash' | 'logout' | 'check' | 'refresh' | 'star' | 'play' | 'upload' | 'chevron' | 'eye' | 'user';
+export type IconName = 'lock' | 'unlock' | 'settings' | 'video' | 'photo' | 'gif' | 'heart' | 'search' | 'arrow' | 'back' | 'plus' | 'close' | 'menu' | 'shield' | 'grid' | 'history' | 'album' | 'trash' | 'logout' | 'check' | 'refresh' | 'star' | 'play' | 'upload' | 'chevron' | 'eye' | 'user' | 'link';
 const paths: Record<IconName, React.ReactNode> = {
   lock: <><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></>,
   unlock: <><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 7.7-1.5M12 14v3"/></>,
@@ -21,6 +21,7 @@ const paths: Record<IconName, React.ReactNode> = {
   play: <path d="m8 4 12 8-12 8z"/>, upload: <><path d="M4 16v5h16v-5M12 16V3m-5 5 5-5 5 5"/></>,
   chevron: <path d="m9 5 7 7-7 7"/>, eye: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></>,
   user: <><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></>,
+  link: <path d="m10 13 4-4m-6 1-3 3a4.2 4.2 0 0 0 6 6l3-3m-4-8 3-3a4.2 4.2 0 0 1 6 6l-3 3"/>,
 };
 export function Icon({ name, size = 20, filled = false }: { name: IconName; size?: number; filled?: boolean }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;

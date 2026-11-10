@@ -638,7 +638,9 @@ try {
   assert.equal((await copiedAdmin.json('/session', 'GET', undefined, 403, {
     ...proxyHeaders, 'X-Forwarded-For': '127.0.0.1',
   })).code, 'admin_local_only');
-  assert.equal((await localAdmin.json('/session')).role, 'Admin');
+  const localAdminSession = await localAdmin.json('/session');
+  assert.equal(localAdminSession.role, 'Admin');
+  assert.equal(localAdminSession.publicOrigin, hostedOrigin);
   assert.equal((await localAdmin.json('/session', 'GET', undefined, 200, { Host: `localhost:${port}` })).role, 'Admin');
   assert.equal((await localAdmin.json('/home')).totalCount, 2);
   await localAdmin.json('/auth/lock', 'POST');
@@ -653,6 +655,7 @@ try {
   assert.match(remoteLogin.headers.get('set-cookie'), /; secure/i);
   const hostedSession = await remoteLogin.json();
   assert.equal(hostedSession.role, 'User');
+  assert.equal(hostedSession.publicOrigin, hostedOrigin);
   hosted.csrf = hostedSession.csrfToken;
   await hosted.json('/home', 'GET', undefined, 200, proxyHeaders);
   const hostedTags = await hosted.request('/tags', 'GET', undefined, proxyHeaders);
@@ -664,6 +667,13 @@ try {
   assert.match(hostedPage.headers.get('cache-control'), /no-store/);
   const hostedHtml = await hostedPage.text();
   assert.equal(hostedHtml, await readFile(path.join(serverRoot, 'wwwroot', 'index.html'), 'utf8'));
+  for (const route of ['/photo', '/video', '/gif', `/photo/${photo.id}`, `/video/${video.id}`]) {
+    const response = await fetch(origin + route, { headers: proxyHeaders });
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), hostedHtml);
+  }
+  await new Client().json(`/media/${video.id}`, 'GET', undefined, 401, proxyHeaders);
+  assert.equal((await hosted.json(`/media/${video.id}`, 'GET', undefined, 200, proxyHeaders)).id, video.id);
   const assets = [...hostedHtml.matchAll(/(?:src|href)="(\/assets\/[^\"]+)"/g)].map(match => match[1]);
   assert.ok(assets.some(asset => asset.endsWith('.js')));
   for (const asset of assets) {
@@ -671,7 +681,7 @@ try {
     assert.equal(response.status, 200);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), await readFile(path.join(serverRoot, 'wwwroot', asset)));
   }
-  check('HTTPS friend receives exactly eleven current tags and the published frontend assets without caching');
+  check('HTTPS serves direct frontend links and assets while media metadata still requires sign-in');
   await localAdmin.json('/accounts/friend', 'PATCH', { canUpload: true });
   assert.equal((await hosted.json('/session', 'GET', undefined, 200, proxyHeaders)).canUpload, true);
   const hostedPhoto = await hosted.json('/imports?fileName=https-permitted.png', 'POST',

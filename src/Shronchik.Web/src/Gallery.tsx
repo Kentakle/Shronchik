@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { api, streamUrl } from './api';
 import { AlbumsPanel } from './Albums';
 import { albumImportLabel } from './AlbumImportDialog';
+import { followLink, mediaPath } from './routes';
 import { formatBytes } from './Dialogs';
 import { isTypingTarget, matchesHotkey } from './hotkeys';
 import { errorMessage } from './i18n';
@@ -462,7 +463,7 @@ const MediaCard = memo(function MediaCard({ item, t, admin, language, hoverDelay
   const thumbnail = useThumbnail(cacheable ? source : '', 'image', preview);
   const imageUrl = cacheable ? thumbnail?.url : source;
   const failed = Boolean(thumbnail?.error || (imageUrl && imageUrl === failedSource));
-  return <button className="media-card" onClick={() => onOpen(item)}>
+  return <a className="media-card" href={mediaPath(item)} onClick={event => followLink(event, () => onOpen(item))}>
     <div className={'card-preview preview-' + item.type} ref={preview}>
       {item.type === 'video' ? <VideoThumbnail id={item.id} version={item.posterVersion} hoverDelayMs={hoverDelayMs}/>
         : !imageUrl || failed ? <span className="image-failed" title={failed ? t.imageUnavailable : undefined}><Icon name={item.type}/></span>
@@ -478,5 +479,5 @@ const MediaCard = memo(function MediaCard({ item, t, admin, language, hoverDelay
         <span>{item.type === 'video' ? <><Icon name="eye"/>{item.views.toLocaleString(language)}</> : formatBytes(item.size)}</span>
       </div>
     </div>
-  </button>;
+  </a>;
 });

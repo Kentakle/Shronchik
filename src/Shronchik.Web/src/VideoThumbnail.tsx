@@ -69,7 +69,7 @@ export function VideoThumbnail({ id, version, hoverDelayMs = 300 }: { id: string
 
   useEffect(() => {
     const element = target.current;
-    const card = element?.closest('button') ?? element;
+    const card = element?.closest('button, a[href]') ?? element;
     if (!element || !card) return;
     let waiting: number | undefined;
     let pointerInside = false;
@@ -101,7 +101,7 @@ export function VideoThumbnail({ id, version, hoverDelayMs = 300 }: { id: string
     const enter = (event: PointerEvent) => { if (event.pointerType !== 'touch') { pointerInside = true; schedule(); } };
     const leave = () => { pointerInside = false; if (!focused) stop(); };
     const focus = () => {
-      // Mouse clicks and touch taps also focus buttons; only keyboard focus previews.
+      // Only keyboard focus previews.
       if (card.matches(':focus-visible')) { focused = true; schedule(); }
     };
     const blur = (event: FocusEvent) => {
@@ -140,7 +140,7 @@ export function VideoThumbnail({ id, version, hoverDelayMs = 300 }: { id: string
   useEffect(() => {
     if (!previewing) return;
     const element = preview.current;
-    const card = target.current?.closest('button') ?? target.current;
+    const card = target.current?.closest('button, a[href]') ?? target.current;
     if (!card) return;
     // Inert changes have no event. Watch only while a decoder is active.
     const observer = new MutationObserver(() => {

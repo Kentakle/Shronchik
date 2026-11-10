@@ -216,7 +216,8 @@ object SessionInfo(AppSession? s) => new
     csrfToken = s?.CsrfToken,
     canUpload = identities.CanUpload(s?.AccountId),
     weakPassword = identities.Find(s?.AccountId)?.WeakPassword == true,
-    mustChangePassword = identities.Find(s?.AccountId)?.MustChangePassword == true
+    mustChangePassword = identities.Find(s?.AccountId)?.MustChangePassword == true,
+    publicOrigin = s is null ? null : publicOrigin?.GetLeftPart(UriPartial.Authority)
 };
 app.MapGet("/api/v1/session", (HttpContext ctx) => SessionInfo((AppSession?)ctx.Items["session"]));
 

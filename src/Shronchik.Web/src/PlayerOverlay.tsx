@@ -1,9 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent, ReactNode } from 'react';
+import { Icon } from './Icon';
 import './player-overlay.css';
 
-export function PlayerOverlay({ title, onClose, onDismissStart, children }: {
+export function PlayerOverlay({ title, backLabel, copyLinkLabel, copyLinkNotice, onCopyLink, onClose, onDismissStart, children }: {
   title: string;
+  backLabel: string;
+  copyLinkLabel: string;
+  copyLinkNotice?: { text: string; error?: boolean } | null;
+  onCopyLink: () => void;
   onClose: () => void;
   onDismissStart: () => void;
   children: (dismiss: () => void, closing: boolean) => ReactNode;
@@ -61,6 +66,17 @@ export function PlayerOverlay({ title, onClose, onDismissStart, children }: {
       backdropPointer.current = false;
     }}
     onPointerCancel={() => { backdropPointer.current = false; }}>
+    <div className="player-toolbar">
+      <button type="button" className="text-button back-link" onClick={dismiss}>
+        <Icon name="close" size={18}/>{backLabel}
+      </button>
+      <button type="button" className="text-button" disabled={closing} onClick={onCopyLink}>
+        <Icon name="link" size={18}/>{copyLinkLabel}
+      </button>
+      <div className="player-copy-notice" role="status" data-error={copyLinkNotice?.error || undefined}>
+        {copyLinkNotice?.text}
+      </div>
+    </div>
     {children(dismiss, closing)}
   </dialog>;
 }

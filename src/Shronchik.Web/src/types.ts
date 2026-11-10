@@ -10,6 +10,7 @@ export type Session = {
   weakPassword: boolean;
   mustChangePassword: boolean;
   canUpload: boolean;
+  publicOrigin?: string | null;
 };
 export type ManagedAccount = {
   username: string;

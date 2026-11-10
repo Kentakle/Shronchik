@@ -23,10 +23,21 @@
   animation: player-shade-exit var(--duration-base) ease-in both;
 }
 .player-overlay > .player-page {
-  padding: 1.15rem clamp(.8rem, 2vw, 1.6rem) 1.65rem;
+  padding: .6rem clamp(.8rem, 2vw, 1.6rem) 1.65rem;
   animation: none;
 }
-.player-overlay .back-link { margin-bottom: .9rem; }
+.player-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 1rem;
+  padding: .85rem clamp(.8rem, 2vw, 1.6rem) 0;
+}
+.player-toolbar .text-button { min-height: 2.5rem; font-size: .875rem; }
+.player-toolbar .back-link { margin: 0; }
+.player-copy-notice { flex-basis: 100%; text-align: end; font-size: .875rem; color: var(--color-muted); }
+.player-copy-notice[data-error] { color: var(--color-error); }
 .player-overlay .player-stage:not(.image-stage) { max-height: 67dvh; }
 
 @keyframes player-dialog-enter {

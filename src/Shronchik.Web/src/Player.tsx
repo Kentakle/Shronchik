@@ -18,10 +18,10 @@ import './player-rating.css';
 
 export type OpenMedia = { media: Media; time: number; volume: number; muted?: boolean; playSessionId: string | null; counted: boolean };
 export type MediaUpdate = Pick<Media, 'id'> & Partial<Media>;
-export function Player({ context, t, language, admin, accountId, settings, closing, onOpenRelated, onNavigate, onBack, onUpdate, onTimeline, onPlaying, onTag, onTrash, onAlbumsChanged }: {
+export function Player({ context, t, language, admin, accountId, settings, closing, onOpenRelated, onNavigate, onUpdate, onTimeline, onPlaying, onTag, onTrash, onAlbumsChanged }: {
   closing: boolean;
   settings: Settings; onOpenRelated: (media: Media) => void; onNavigate: (direction: 'next' | 'previous') => void;
-  context: OpenMedia; t: T; language: Language; admin: boolean; accountId: string; onBack: () => void;
+  context: OpenMedia; t: T; language: Language; admin: boolean; accountId: string;
   onUpdate: (value: MediaUpdate) => void; onTimeline: (time: number, volume: number) => void;
   onPlaying: (value: boolean) => void; onTag: (tag: string) => void; onTrash: () => void; onAlbumsChanged: () => void;
 }) {
@@ -134,7 +134,7 @@ export function Player({ context, t, language, admin, accountId, settings, closi
     catch (err) { setError(errorMessage(err, t)); }
     finally { setBusy(false); }
   }
-  return <div className="player-page"><button className="text-button back-link" onClick={onBack}><Icon name="close" size={18}/>{t.backGallery}</button>
+  return <div className="player-page">
     <div ref={stage} className={`player-stage ${media.type !== 'video' ? 'image-stage' : ''} ${zoom ? 'zoomed' : ''}`}
       data-loading={loadingVideo || undefined} aria-busy={loadingVideo || undefined}>
       {media.type === 'video' ? <>

@@ -78,7 +78,7 @@ async function createServer() {
         }
         throw new Error('Unhandled synthetic API ' + request.method + ' ' + endpoint);
       }
-      const file = path.resolve(webRoot, '.' + (url.pathname === '/' ? '/index.html' : url.pathname));
+      const file = path.resolve(webRoot, '.' + (url.pathname === '/' || url.pathname === '/video' ? '/index.html' : url.pathname));
       if (!file.startsWith(webRoot + path.sep)) { response.writeHead(403).end(); return; }
       const data = await fs.readFile(file);
       response.writeHead(200, { 'Content-Type': file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html' }).end(data);
@@ -377,7 +377,6 @@ async function playbackChecks(page, origin, output) {
   await page.getByRole('button', { name: 'Выключить звук', exact: true }).click();
   await close();
   await page.reload();
-  await page.locator('.category-video').click();
   await open();
   assert.ok(await mainVideo.evaluate(video => video.muted && video.volume === .23));
   check('Admin volume and mute survive next video and a full page reload');
@@ -471,7 +470,6 @@ async function playbackChecks(page, origin, output) {
   await setVolume(.41);
   await close();
   await page.reload();
-  await page.locator('.category-video').click();
   await open();
   assert.equal(await mainVideo.evaluate(video => video.volume), .41);
   await close();

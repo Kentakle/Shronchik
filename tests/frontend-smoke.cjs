@@ -53,7 +53,8 @@ async function main() {
   await queueChecks();
   const server = http.createServer(async (request, response) => {
     const route = new URL(request.url, 'http://127.0.0.1').pathname;
-    const file = path.resolve(webRoot, '.' + (route === '/' ? '/index.html' : route));
+    const appRoute = route === '/' || /^\/(?:photo|video|gif)(?:\/[^/]+)?\/?$/.test(route);
+    const file = path.resolve(webRoot, '.' + (appRoute ? '/index.html' : route));
     if (!file.startsWith(webRoot + path.sep)) { response.writeHead(403).end(); return; }
     try {
       const data = await fs.readFile(file);
@@ -69,6 +70,11 @@ async function main() {
     browser = await chromium.launch({ executablePath: process.env.SHRONCHIK_EDGE ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
     const page = await browser.newPage({ viewport: { width: 5120, height: 2160 } });
     page.setDefaultTimeout(12000);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', { value: {
+        writeText: async text => { window.copiedLink = text; },
+      } });
+    });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=', 'base64');
@@ -78,27 +84,47 @@ async function main() {
     const photos = Array.from({ length: 150 }, (_, index) => item(index + 1));
     const video = item(1000, 'video');
     const neighbor = item(1001, 'video');
-    let locked = false, activeImages = 0, maxImages = 0, imageRequests = 0, playRequests = 0, neighborRequests = 0;
+    const gif = item(2000, 'gif');
+    const album = { id: 'synthetic-album', name: 'Mixed synthetic album', itemCount: 2 };
+    const byType = { photo: photos, video: [video], gif: [gif] };
+    const byId = new Map([...photos, video, neighbor, gif].map(media => [media.id, media]));
+    let authenticated = true, locked = false, activeImages = 0, maxImages = 0, imageRequests = 0, playRequests = 0, neighborRequests = 0;
+    let guestMediaRequests = 0;
+    let publicOrigin = null;
     let playDelay = null, neighborDelay = null;
     const queries = [];
     const session = () => ({ authenticated: true, locked, role: 'User', accountId: 'synthetic.friend',
-      csrfToken: 'synthetic-token', weakPassword: false, mustChangePassword: false });
+      csrfToken: 'synthetic-token', weakPassword: false, mustChangePassword: false, publicOrigin });
     await page.route('**/api/v1/**', async route => {
       const url = new URL(route.request().url());
       const endpoint = url.pathname.slice('/api/v1'.length);
       const json = value => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
       try {
-        if (endpoint === '/session' || endpoint === '/session/heartbeat') return await json(session());
+        if (endpoint === '/session' || endpoint === '/session/heartbeat') {
+          return authenticated ? await json(session()) : await route.fulfill({ status: 401 });
+        }
+        if (endpoint === '/auth/login') { authenticated = true; return await json(session()); }
+        if (!authenticated && endpoint.startsWith('/media')) {
+          guestMediaRequests++;
+          return await route.fulfill({ status: 401 });
+        }
         if (endpoint === '/auth/lock') { locked = true; return await json(session()); }
         if (endpoint === '/auth/unlock') { locked = false; return await json(session()); }
-        if (endpoint === '/home') return await json({ totalCount: 151, totalBytes: 1234, categories: ['photo', 'video', 'gif'].map(type => ({ type, count: type === 'photo' ? 150 : type === 'video' ? 1 : 0, totalBytes: 1234 })) });
+        if (endpoint === '/home') return await json({ totalCount: 152, totalBytes: 1234, categories: Object.entries(byType).map(([type, items]) => ({ type, count: items.length, totalBytes: 1234 })) });
         if (endpoint === '/tags') return await json(['asia', 'dark-hair']);
         if (endpoint === '/settings') return await json({ language: 'ru', gridColumns: 15, pageBatchSize: 150, showRelatedBelow: false, queryDebounceMs: 20, animationMs: 300 });
+        if (endpoint === '/albums') return await json({ items: [album] });
+        if (endpoint === `/albums/${album.id}/items`) return await json({ items: [photos[0], video], nextCursor: null, hasMore: false });
         if (endpoint === '/media') {
           queries.push(url.searchParams);
-          return await json({ items: url.searchParams.get('type') === 'video' ? [video] : photos, nextCursor: null, hasMore: false });
+          return await json({ items: byType[url.searchParams.get('type')] ?? [], nextCursor: null, hasMore: false });
+        }
+        if (/^\/media\/[^/]+$/.test(endpoint)) {
+          const media = byId.get(endpoint.slice('/media/'.length));
+          return media ? await json(media) : await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ code: 'not_found' }) });
         }
         if (endpoint.endsWith('/neighbor')) { neighborRequests++; await neighborDelay?.promise; return await json(neighbor); }
+        if (endpoint.endsWith('/related')) return await json({ items: [] });
         if (endpoint.endsWith('/play-sessions')) { playRequests++; return await json({ id: 'synthetic-play' }); }
         if (endpoint.endsWith('/opened')) return await route.fulfill({ status: 204 });
         if (endpoint.endsWith('/first-play')) { await playDelay?.promise; return await route.fulfill({ status: 204 }); }
@@ -117,7 +143,9 @@ async function main() {
       }
     });
     await page.goto(origin);
+    for (const type of Object.keys(byType)) assert.equal(await page.locator(`.category-${type}`).getAttribute('href'), `/${type}`);
     await page.locator('.category-photo').click();
+    await page.waitForURL(origin + '/photo');
     await page.waitForFunction(() => document.querySelectorAll('.media-card img').length >= 12);
     assert.ok(maxImages <= 6, `Observed ${maxImages} simultaneous thumbnail requests`);
     assert.ok(imageRequests > 6);
@@ -133,9 +161,14 @@ async function main() {
     await page.locator('.auth-submit').click();
     await page.getByRole('button', { name: 'Shronchik', exact: true }).click();
     await page.locator('.category-video').click();
-    await page.locator('.media-card').click();
+    await page.waitForURL(origin + '/video');
+    const videoCard = page.locator('.media-card');
+    assert.equal(await videoCard.getAttribute('href'), `/video/${video.id}`);
+    await videoCard.click();
     const player = page.locator('.player-overlay[open]');
     await player.waitFor();
+    const videoUrl = `${origin}/video/${video.id}`;
+    await page.waitForURL(videoUrl);
     playDelay = deferred();
     await page.locator('.player-stage video').evaluate(element => element.dispatchEvent(new Event('playing', { bubbles: true })));
     await page.getByRole('button', { name: 'В избранное', exact: true }).click();
@@ -170,6 +203,66 @@ async function main() {
     assert.equal(last.get('includeTags'), 'asia');
     assert.equal(last.get('excludeTags'), '');
     check('a player tag clears the old search and tag filters before showing one selected tag');
+
+    const gifUrl = `${origin}/gif/${gif.id}`;
+    await page.goto(origin + '/gif');
+    await page.locator('.media-card').click();
+    await page.waitForURL(gifUrl);
+    await page.getByRole('dialog', { name: gif.title, exact: true }).waitFor();
+    await page.goBack();
+    await page.waitForURL(origin + '/gif');
+    await player.waitFor({ state: 'hidden' });
+    await page.goForward();
+    await page.waitForURL(gifUrl);
+    await page.getByRole('dialog', { name: gif.title, exact: true }).waitFor();
+    check('the GIF section opens directly and Back and Forward move between section and file');
+
+    authenticated = false;
+    publicOrigin = 'https://media.example.test';
+    await page.goto(videoUrl);
+    await page.locator('#login-username').fill('synthetic.friend');
+    await page.locator('#login-password').fill('synthetic-password');
+    assert.equal(page.url(), videoUrl);
+    assert.equal(guestMediaRequests, 0);
+    await page.locator('.auth-submit').click();
+    await page.getByRole('dialog', { name: video.title, exact: true }).waitFor();
+    await page.reload();
+    await page.getByRole('dialog', { name: video.title, exact: true }).waitFor();
+    await page.keyboard.press('Alt+ArrowRight');
+    const neighborUrl = `${origin}/video/${neighbor.id}`;
+    await page.waitForURL(neighborUrl);
+    await page.getByRole('dialog', { name: neighbor.title, exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Копировать ссылку', exact: true }).click();
+    await page.waitForFunction(url => window.copiedLink === url, `${publicOrigin}/video/${neighbor.id}`);
+    await page.locator('.back-link').click();
+    await page.waitForURL(origin + '/video');
+    await player.waitFor({ state: 'hidden' });
+    check('a video link survives sign-in and reload, and copying uses the public origin and current video');
+
+    await page.goto(origin + '/photo');
+    await page.getByRole('button', { name: 'Альбомы', exact: true }).click();
+    await page.locator('.album-open').filter({ hasText: album.name }).click();
+    const albumVideo = page.locator(`.albums-section .media-card[href="/video/${video.id}"]`);
+    await albumVideo.click();
+    await page.waitForURL(videoUrl);
+    await page.getByRole('dialog', { name: video.title, exact: true }).waitFor();
+    await page.locator('.back-link').click();
+    await page.waitForURL(origin + '/photo');
+    await player.waitFor({ state: 'hidden' });
+    await albumVideo.waitFor();
+    check('opening a video from a photo album uses its video URL and closing returns to that album');
+
+    publicOrigin = null;
+    const photoUrl = `${origin}/photo/${photos[0].id}`;
+    await page.goto(photoUrl);
+    await page.getByRole('dialog', { name: photos[0].title, exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Копировать ссылку', exact: true }).click();
+    await page.waitForFunction(url => window.copiedLink === url, photoUrl);
+    await page.goto(`${origin}/photo/00000000-0000-0000-0000-999999999999`);
+    await page.locator('.toast-error').waitFor();
+    await player.waitFor({ state: 'hidden' });
+    check('a photo opens and copies its direct link, and a missing item shows an error');
+
     await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.deepEqual(errors, []);
