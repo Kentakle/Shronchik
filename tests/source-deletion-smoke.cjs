@@ -291,6 +291,8 @@ async function browserChecks() {
     await single.locator('.modal-actions').getByRole('button', { name: 'Отмена', exact: true }).click();
     check('a wrong source folder prevents upload and cleanup without touching other files');
 
+    await page.locator('.brand').click();
+    await page.locator('.category-video').click();
     await openSingle(['video-cover-retry.mp4']);
     await single.getByLabel('Загрузить свою обложку', { exact: true }).setInputFiles({ name: 'synthetic-cover.png', mimeType: 'image/png', buffer: png });
     await single.locator('.poster-picker-custom').waitFor();
@@ -321,6 +323,8 @@ async function browserChecks() {
     assert.ok(deleted.includes('video-cover-retry.mp4'));
     check('video source survives failed cover save and is removed after cover retry without a second import');
 
+    await page.locator('.brand').click();
+    await page.locator('.category-photo').click();
     await page.getByRole('button', { name: 'Загрузить альбом', exact: true }).click();
     await choose(album, ['album-cleanup-retry.png']);
     await checkbox(album).check();

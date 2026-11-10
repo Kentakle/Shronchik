@@ -23,8 +23,15 @@ const ru = {
   created: 'Добавлено', type: 'Тип', delete: 'В корзину', deleteConfirm: 'Переместить файл в корзину?',
   deleteText: 'Файл исчезнет из галереи. Восстановить его можно из корзины.', confirm: 'Подтвердить', cancel: 'Отмена',
   save: 'Сохранить', saved: 'Сохранено', title: 'Название', description: 'Описание', file: 'Файл',
-  chooseFile: 'Выберите один файл', dropFile: 'Перетащите файл сюда', supported: 'Фото, GIF, MP4 или WebM',
+  chooseFile: 'Выберите один файл', dropFile: 'Перетащите файл сюда',
   importHelp: 'Оригинал останется на месте. В медиатеку попадёт зашифрованная копия.',
+  importTypeMismatch: 'Файл не подходит для этого раздела. Выберите один из указанных форматов.',
+  emptyImportFile: 'Выбранный файл пуст.',
+  uploadGif: 'Загрузить GIF', convertGif: 'Видео → GIF', convertAndImport: 'Преобразовать и добавить',
+  gifStart: 'Начало, сек.', gifSeconds: 'Длительность, сек.', gifConverting: 'Конвертация в GIF',
+  gifVideoRequired: 'Для конвертации выберите видео одного из указанных форматов.',
+  gifStartInvalid: 'Укажите начало фрагмента внутри видео.',
+  gifConversionError: 'Не удалось создать GIF. Выберите видео, которое воспроизводится в этом браузере, или сократите фрагмент.',
   tagsHint: 'Например: природа, путешествие', tagsHelp: 'Разделяйте теги запятыми', encrypting: 'Завершаем шифрование и проверку…',
   uploading: 'Передача файла', imported: 'Файл добавлен в медиатеку', oneFile: 'Добавляйте по одному файлу за операцию.',
   password: 'Пароль', signIn: 'Войти', unlock: 'Разблокировать', locked: 'Медиатека заблокирована',
@@ -79,8 +86,15 @@ const en: Strings = {
   created: 'Added', type: 'Type', delete: 'Move to trash', deleteConfirm: 'Move this file to trash?',
   deleteText: 'The file will leave the gallery. You can restore it from the trash.', confirm: 'Confirm', cancel: 'Cancel',
   save: 'Save', saved: 'Saved', title: 'Title', description: 'Description', file: 'File',
-  chooseFile: 'Choose one file', dropFile: 'Drop a file here', supported: 'Photos, GIFs, MP4, or WebM',
+  chooseFile: 'Choose one file', dropFile: 'Drop a file here',
   importHelp: 'Your original stays where it is. An encrypted copy is added to the library.',
+  importTypeMismatch: 'This file is not allowed in this section. Choose one of the listed formats.',
+  emptyImportFile: 'The selected file is empty.',
+  uploadGif: 'Upload GIF', convertGif: 'Video → GIF', convertAndImport: 'Convert and add',
+  gifStart: 'Start (seconds)', gifSeconds: 'Duration (seconds)', gifConverting: 'Converting to GIF',
+  gifVideoRequired: 'Choose a video in one of the listed formats to convert it to GIF.',
+  gifStartInvalid: 'Choose a start time within the video.',
+  gifConversionError: 'Could not create a GIF. Choose a video that plays in this browser or select a shorter clip.',
   tagsHint: 'For example: nature, travel', tagsHelp: 'Separate tags with commas', encrypting: 'Finishing encryption and verification…',
   uploading: 'Uploading file', imported: 'File added to your library', oneFile: 'Add one file at a time.',
   password: 'Password', signIn: 'Sign in', unlock: 'Unlock', locked: 'Your library is locked',
@@ -119,6 +133,7 @@ export function errorMessage(error: unknown, t: Strings) {
   const code = error.code.toLowerCase();
   if (code.includes('import_busy')) return t.importBusy;
   if (code.includes('duplicate')) return t.duplicate;
+  if (code === 'media_type_mismatch') return t.importTypeMismatch;
   if (error.status === 415 || code.includes('unsupported') || code.includes('signature')) return t.unsupported;
   if (code.includes('single_file')) return t.oneFile;
   if (code.includes('incomplete_upload')) return t.incompleteUpload;

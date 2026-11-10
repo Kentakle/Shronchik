@@ -4,6 +4,7 @@ import { ApiError, upload } from './api';
 import { formatBytes, Modal } from './Dialogs';
 import { Icon } from './Icon';
 import { errorMessage } from './i18n';
+import { acceptsImportFile, importFormats } from './importFormats';
 import type { T } from './i18n';
 import { TagPicker } from './TagPicker';
 import { SourceDeletionOption } from './SourceDeletionOption';
@@ -49,7 +50,7 @@ export function AlbumImportDialog({ t, language, allowSourceDeletion = false, on
   function choose(files: FileList | null) {
     if (!files?.length || started) return;
     const selected = Array.from(files);
-    if (selected.some(file => !/\.(png|jpe?g|webp)$/i.test(file.name))) {
+    if (selected.some(file => !acceptsImportFile(file, 'photo'))) {
       setError(text('Для альбома выберите только фотографии PNG, JPEG или WebP.', 'Choose only PNG, JPEG or WebP photos for the album.'));
       return;
     }
@@ -138,7 +139,7 @@ export function AlbumImportDialog({ t, language, allowSourceDeletion = false, on
             }
           }
           if (run.stopped) { update(photo.id, { status: 'pending', progress: 0 }); break; }
-          const request = upload<Media>(prepared?.file ?? photo.file, title, tags, progress => {
+          const request = upload<Media>(prepared?.file ?? photo.file, 'photo', title, tags, progress => {
             if (!run.stopped) update(photo.id, { progress });
           });
           run.cancel = request.cancel;
@@ -186,9 +187,9 @@ export function AlbumImportDialog({ t, language, allowSourceDeletion = false, on
             <span className="drop-icon"><Icon name="album" size={26}/></span>
             <strong>{text('Перетащите фотографии сюда', 'Drop photos here')}</strong>
             <span>{text('Выбрать несколько фотографий', 'Choose multiple photos')}</span>
-            <small>PNG · JPEG · WebP</small>
+            <small>{importFormats.photo.label}</small>
           </button>
-          <input ref={input} className="visually-hidden" type="file" multiple accept="image/jpeg,image/png,image/webp"
+          <input ref={input} className="visually-hidden" type="file" multiple accept={importFormats.photo.extensions.join(',')}
             aria-label={text('Выбрать фотографии альбома', 'Choose album photos')} disabled={started}
             onChange={event => { choose(event.target.files); event.target.value = ''; }}/>
           {allowSourceDeletion && <SourceDeletionOption language={language} directory={sourceDirectory} onChange={setSourceDirectory}

@@ -108,6 +108,24 @@ function Test-ShronchikBuildNeeded {
     return -not (Test-ShronchikBuildCurrent -ProjectRoot $ProjectRoot -Mode $Mode)
 }
 
+function Build-ShronchikWeb {
+    param([string]$ProjectRoot)
+    Push-Location (Join-Path $ProjectRoot 'src/Shronchik.Web')
+    try {
+        $lockHash = (Get-FileHash -LiteralPath 'package-lock.json' -Algorithm SHA256).Hash
+        $dependencyStamp = 'node_modules/.shronchik-lock-hash'
+        if (-not (Test-Path -LiteralPath $dependencyStamp -PathType Leaf) -or
+            (Get-Content -LiteralPath $dependencyStamp -Raw) -ne $lockHash) {
+            & npm.cmd ci --no-fund --no-audit
+            if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+            Set-Content -LiteralPath $dependencyStamp -Value $lockHash -NoNewline -Encoding ascii
+        }
+        & npm.cmd run build
+        if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed.' }
+    }
+    finally { Pop-Location }
+}
+
 function Start-ShronchikBuildState {
     param([string]$ProjectRoot, [ValidateSet('Debug', 'Hosting')][string]$Mode)
     $path = Get-ShronchikBuildStatePath -ProjectRoot $ProjectRoot -Mode $Mode

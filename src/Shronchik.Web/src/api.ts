@@ -1,3 +1,5 @@
+import type { MediaType } from './types';
+
 let csrfToken: string | null = null;
 export function setCsrfToken(token: string | null) { csrfToken = token; }
 
@@ -80,10 +82,10 @@ export async function postJsonStream<T>(path: string, body: unknown, onEvent: (e
   }
 }
 
-export function upload<T>(file: File, title: string, tags: string, onProgress: (value: number) => void) {
+export function upload<T>(file: File, type: MediaType, title: string, tags: string, onProgress: (value: number) => void) {
   const xhr = new XMLHttpRequest();
   const promise = new Promise<T>((resolve, reject) => {
-    const query = new URLSearchParams({ fileName: file.name, title, tags });
+    const query = new URLSearchParams({ fileName: file.name, type, title, tags });
     xhr.open('POST', `/api/v1/imports?${query}`);
     xhr.withCredentials = true;
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');

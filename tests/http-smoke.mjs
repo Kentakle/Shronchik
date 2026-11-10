@@ -405,16 +405,16 @@ try {
   assert.equal(grantedUploader.enabled, true, 'changing upload permission preserves account access');
   assert.equal((await uploader.json('/session')).canUpload, true, 'permission applies to an existing session');
   assert.equal((await uploader.json('/session/heartbeat', 'POST', { active: true, playing: false })).canUpload, true);
-  const uploadPhoto = await uploader.json('/imports?fileName=permission-photo.png&tags=Asia', 'POST', uploadPhotoBytes, 201);
+  const uploadPhoto = await uploader.json('/imports?fileName=permission-photo.png&type=photo&tags=Asia', 'POST', uploadPhotoBytes, 201);
   assert.equal(uploadPhoto.type, 'photo');
   assert.deepEqual(uploadPhoto.tags, ['asia']);
   assert.deepEqual(Buffer.from(await (await friend.request(`/media/${uploadPhoto.id}/stream`)).arrayBuffer()), uploadPhotoBytes);
   await uploader.json('/imports?fileName=permission-photo-copy.png', 'POST', uploadPhotoBytes, 409);
   const uploadGifBytes = Buffer.concat([Buffer.from('GIF89a'), randomBytes(48)]);
-  const uploadGif = await uploader.json('/imports?fileName=permission-animation.gif', 'POST', uploadGifBytes, 201);
+  const uploadGif = await uploader.json('/imports?fileName=permission-animation.gif&type=gif', 'POST', uploadGifBytes, 201);
   assert.equal(uploadGif.type, 'gif');
   const uploadVideoBytes = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypisom'), randomBytes(96)]);
-  const uploadVideo = await uploader.json('/imports?fileName=permission-video.mp4', 'POST', uploadVideoBytes, 201);
+  const uploadVideo = await uploader.json('/imports?fileName=permission-video.mp4&type=video', 'POST', uploadVideoBytes, 201);
   assert.equal(uploadVideo.type, 'video');
   assert.ok(uploadVideo.importToken, 'new user video imports receive an initial-poster capability');
   for (const item of [photo, uploadPhoto, uploadGif, uploadVideo]) {
@@ -425,6 +425,22 @@ try {
   await uploader.json('/accounts', 'GET', undefined, 403);
   await uploader.json('/accounts/uploader', 'DELETE', undefined, 403);
   check('Admin grants upload separately; active users import shared photo, GIF and video without deletion or account privileges');
+
+  const countBeforeRefusedImports = (await admin.json('/home')).totalCount;
+  for (const [fileName, actualType, bytes] of [
+    ['photo.png', 'photo', uploadPhotoBytes], ['animation.gif', 'gif', uploadGifBytes], ['video.mp4', 'video', uploadVideoBytes],
+  ]) {
+    for (const type of ['photo', 'gif', 'video'].filter(type => type !== actualType)) {
+      const rejected = await uploader.json(`/imports?fileName=${fileName}&type=${type}`, 'POST', bytes, 415);
+      assert.equal(rejected.code, 'media_type_mismatch');
+    }
+  }
+  const renamedVideo = await uploader.json('/imports?fileName=renamed.gif&type=gif', 'POST', uploadVideoBytes, 415);
+  assert.equal(renamedVideo.code, 'unsupported_media_signature');
+  for (const type of ['unknown', '', 'photo&type=video'])
+    await uploader.json(`/imports?fileName=photo.png&type=${type}`, 'POST', png, 400);
+  assert.equal((await admin.json('/home')).totalCount, countBeforeRefusedImports);
+  check('imports reject category mismatches, renamed media, and invalid categories without publishing files');
 
   const countBeforeSlowUpload = (await admin.json('/home')).totalCount;
   const stagingDirectory = path.join(library, 'staging');

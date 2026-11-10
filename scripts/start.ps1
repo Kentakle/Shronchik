@@ -30,16 +30,7 @@ try {
         $nugetConfig = Join-Path $projectRoot 'NuGet.Config'
         & $dotnetCommand build (Join-Path $serverRoot 'Shronchik.Server.csproj') --no-incremental "-p:RestoreConfigFile=$nugetConfig" -m:1 -p:UseSharedCompilation=false
         if ($LASTEXITCODE -ne 0) { throw 'Server build failed. Install the .NET 10 SDK and try again.' }
-        Push-Location (Join-Path $projectRoot 'src/Shronchik.Web')
-        try {
-            if (-not (Test-Path -LiteralPath 'node_modules')) {
-                & npm.cmd ci --no-fund --no-audit
-                if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
-            }
-            & npm.cmd run build
-            if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed.' }
-        }
-        finally { Pop-Location }
+        Build-ShronchikWeb -ProjectRoot $projectRoot
         Save-ShronchikBuildState -ProjectRoot $projectRoot -Mode Debug -InputFingerprint $buildInputs
     }
     if (-not (Test-Path -LiteralPath $webIndex) -or -not (Test-Path -LiteralPath $serverDll)) { throw 'Build missing. Run without -NoBuild.' }

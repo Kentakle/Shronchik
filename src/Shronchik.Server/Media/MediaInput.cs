@@ -2,7 +2,7 @@ namespace Shronchik.Server.Media;
 
 public static class MediaInput
 {
-    public static (string Type, string Mime) Identify(ReadOnlySpan<byte> bytes, string fileName)
+    public static (string Type, string Mime)? Identify(ReadOnlySpan<byte> bytes, string fileName)
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         if (bytes.StartsWith(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }) && ext == ".png") return ("photo", "image/png");
@@ -11,7 +11,7 @@ public static class MediaInput
         if (bytes.Length >= 12 && bytes[..4].SequenceEqual("RIFF"u8) && bytes.Slice(8, 4).SequenceEqual("WEBP"u8) && ext == ".webp") return ("photo", "image/webp");
         if (bytes.Length >= 12 && bytes.Slice(4, 4).SequenceEqual("ftyp"u8) && ext is ".mp4" or ".m4v" or ".mov") return ("video", ext == ".mov" ? "video/quicktime" : "video/mp4");
         if (bytes.StartsWith(new byte[] { 26, 69, 223, 163 }) && ext == ".webm") return ("video", "video/webm");
-        throw new ArgumentException("Unsupported media signature.");
+        return null;
     }
 
     public static (long Offset, long Count, bool Partial)? Range(string? value, long length)

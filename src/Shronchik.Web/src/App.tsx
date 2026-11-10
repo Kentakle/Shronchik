@@ -285,8 +285,8 @@ export default function App() {
         onTrash={() => { dismiss(); invalidate(); }} onAlbumsChanged={() => { galleryDirty.current = true; }}/>}
     </PlayerOverlay>}
     {notice && <div className={`toast ${notice.error ? 'toast-error' : ''}`} role={notice.error ? 'alert' : 'status'}><Icon name={notice.error ? 'close' : 'check'} size={18}/><span>{notice.text}</span><button className="inline-icon" onClick={() => setNotice(null)} aria-label={t.close}><Icon name="close" size={15}/></button></div>}
-    {modal === 'import' && canUpload && <ImportDialog t={t} language={settings.language} thumbnailCandidates={settings.thumbnailCandidates} allowSourceDeletion={admin} onClose={() => setModal(null)} onImported={() => { setModal(null); setNotice({ text: t.imported }); invalidate(); }}/>}
-    {modal === 'album-import' && canUpload && <AlbumImportDialog t={t} language={settings.language} allowSourceDeletion={admin} onClose={count => {
+    {modal === 'import' && category && canUpload && <ImportDialog key={category} type={category} t={t} language={settings.language} thumbnailCandidates={settings.thumbnailCandidates} allowSourceDeletion={admin} onClose={() => setModal(null)} onImported={() => { setModal(null); setNotice({ text: t.imported }); invalidate(); }}/>}
+    {modal === 'album-import' && category === 'photo' && canUpload && <AlbumImportDialog t={t} language={settings.language} allowSourceDeletion={admin} onClose={count => {
       setModal(null);
       invalidate();
       if (count > 0) setNotice({ text: settings.language === 'ru' ? `Добавлено фотографий: ${count}` : `Photos added: ${count}` });

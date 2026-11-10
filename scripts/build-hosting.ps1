@@ -6,12 +6,7 @@ $env:DOTNET_CLI_HOME = Join-Path $projectRoot '.tools/dotnet-home'
 $env:NUGET_PACKAGES = Join-Path $projectRoot '.cache/nuget'
 . (Join-Path $PSScriptRoot 'build-state.ps1')
 $buildInputs = Start-ShronchikBuildState -ProjectRoot $projectRoot -Mode Hosting
-Push-Location (Join-Path $projectRoot 'src/Shronchik.Web')
-try {
-    & npm.cmd run build
-    if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed.' }
-}
-finally { Pop-Location }
+Build-ShronchikWeb -ProjectRoot $projectRoot
 $serverProject = Join-Path $projectRoot 'src/Shronchik.Server/Shronchik.Server.csproj'
 $nugetConfig = Join-Path $projectRoot 'NuGet.Config'
 # Hash changes can have older timestamps; force compilation before publishing.

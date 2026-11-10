@@ -1,8 +1,9 @@
 .modal.import-modal {
-  width: min(73rem, calc(100vw - 1.5rem));
+  width: min(49rem, calc(100vw - 1.5rem));
   padding: 0;
   border-radius: 1rem;
 }
+.modal.import-modal-video { width: min(73rem, calc(100vw - 1.5rem)); }
 .import-modal > .modal-heading {
   margin: 0;
   padding: .9rem 1.25rem;
@@ -10,6 +11,10 @@
 }
 .import-panels {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: "tags file";
+}
+.import-modal-video .import-panels {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-areas: "tags file cover";
 }
@@ -17,7 +22,8 @@
   min-width: 0;
   padding: 1rem 1.15rem 1.2rem;
 }
-.import-pane-file { grid-area: file; border-inline: 1px solid var(--color-line); }
+.import-pane-file { grid-area: file; border-inline-start: 1px solid var(--color-line); }
+.import-modal-video .import-pane-file { border-inline-end: 1px solid var(--color-line); }
 .import-pane-tags { grid-area: tags; }
 .import-pane-cover { grid-area: cover; }
 .import-pane-tags, .import-pane-cover {
@@ -27,6 +33,23 @@
   margin: 0 0 .65rem;
   font-size: 1rem;
   font-weight: 600;
+}
+.import-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-bottom: .65rem;
+}
+.import-mode button[aria-pressed="true"] {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-color: var(--color-accent);
+}
+.gif-import-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: .65rem;
 }
 .import-panels .tag-picker { margin: 0; }
 .import-panels .tag-picker-selected:empty { display: none; }
@@ -55,10 +78,13 @@
   border-radius: .4rem;
 }
 @media (max-width: 800px) {
-  .import-panels {
+  .import-panels, .import-modal-video .import-panels {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "file" "tags";
+  }
+  .import-modal-video .import-panels {
     grid-template-areas: "file" "tags" "cover";
   }
-  .import-pane-file { border-inline: 0; }
+  .import-pane-file, .import-modal-video .import-pane-file { border-inline: 0; }
   .import-pane-tags, .import-pane-cover { border-top: 1px solid var(--color-line); }
 }

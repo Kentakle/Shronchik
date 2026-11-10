@@ -16,7 +16,7 @@ const clip = Buffer.from('AAAAJGZ0eXBpc29tAAACAGlzb21pc282aXNvMnZwMDltcDQxAAACt2
 
 const item = (id, type = 'video') => ({ id, type, title: 'Synthetic ' + id, description: '', rating: null,
   views: 0, isFavorite: false, tags: ['dark-hair'], size: type === 'video' ? clip.length : png.length,
-  createdAt: '2026-11-08T00:00:00Z', mimeType: type === 'video' ? 'video/mp4' : 'image/png',
+  createdAt: '2026-11-08T00:00:00Z', mimeType: { video: 'video/mp4', photo: 'image/png', gif: 'image/gif' }[type],
   posterVersion: type === 'video' ? 'synthetic-cover' : null });
 const cards = [item('clip-one'), item('clip-two')];
 const requests = [], imports = [], errors = [];
@@ -61,14 +61,19 @@ async function createServer() {
         }
         if (endpoint === '/imports') {
           activeImports++; maxImports = Math.max(maxImports, activeImports);
-          const record = { name: url.searchParams.get('fileName'), title: url.searchParams.get('title'),
+          const record = { name: url.searchParams.get('fileName'), title: url.searchParams.get('title'), type: url.searchParams.get('type'),
             tags: url.searchParams.get('tags'), csrf: request.headers['x-csrf-token'], bytes: 0 };
           imports.push(record);
           try {
-            for await (const chunk of request) record.bytes += chunk.length;
+            const gifChunks = [];
+            for await (const chunk of request) {
+              record.bytes += chunk.length;
+              if (record.type === 'gif') gifChunks.push(chunk);
+            }
+            if (record.type === 'gif') record.payload = Buffer.concat(gifChunks);
             await pause(importDelay);
             if (record.name === failOnce) { failOnce = ''; record.failed = true; return json({ code: 'duplicate' }, 409); }
-            return json({ ...item('import-' + imports.length, 'photo'), title: record.title, tags: record.tags.split(',') }, 201);
+            return json({ ...item('import-' + imports.length, record.type), title: record.title, tags: record.tags.split(',') }, 201);
           } finally { activeImports--; }
         }
         throw new Error('Unhandled synthetic API ' + request.method + ' ' + endpoint);
@@ -101,6 +106,7 @@ async function main() {
     await fs.mkdir(output, { recursive: true });
     await page.goto(origin);
     await albumChecks(page, output);
+    await sectionImportChecks(page, output);
     await playbackChecks(page, origin, output);
     assert.deepEqual(errors, []);
     check('all media feature flows finish without uncaught browser or synthetic server errors');
@@ -138,6 +144,7 @@ async function albumChecks(page, output) {
   assert.equal(imports.length, 10);
   assert.equal(maxImports, 1);
   for (const record of imports) {
+    assert.equal(record.type, 'photo');
     assert.deepEqual(record.tags.split(',').sort(), ['asia', 'dark-hair']);
     assert.equal(record.csrf, 'synthetic-token');
     assert.equal(record.bytes, png.length);
@@ -182,6 +189,77 @@ async function albumChecks(page, output) {
   await dialog.locator('.modal-actions').getByRole('button', { name: 'Закрыть', exact: true }).click();
   importDelay = 40;
   check('album rejects non-photo selections and stopping a batch prevents the remaining requests');
+}
+
+async function sectionImportChecks(page, output) {
+  const dialog = page.locator('.import-modal');
+  const fileInput = dialog.getByLabel('Выберите один файл', { exact: true });
+  const openImport = async type => {
+    await page.locator('.brand').click();
+    await page.locator('.category-' + type).click();
+    await page.locator('.gallery-tools').getByRole('button', { name: 'Добавить файл', exact: true }).click();
+  };
+  const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+  const pngFile = { name: 'photo.png', mimeType: 'image/png', buffer: png };
+  const videoFile = { name: 'clip.mp4', mimeType: 'video/mp4', buffer: clip };
+  const gifFile = { name: 'ready.gif', mimeType: 'image/gif', buffer: gif };
+  const importsBefore = imports.length;
+  for (const [type, extensions, file] of [
+    ['photo', '.png,.jpg,.jpeg,.webp', gifFile],
+    ['video', '.mp4,.m4v,.mov,.webm', pngFile],
+    ['gif', '.gif', videoFile],
+  ]) {
+    await openImport(type);
+    assert.equal(await fileInput.getAttribute('accept'), extensions);
+    await fileInput.setInputFiles(file);
+    await dialog.getByRole('alert').filter({ hasText: /не подходит для этого раздела/ }).waitFor();
+    assert.ok(await dialog.getByRole('button', { name: 'Добавить', exact: true }).isDisabled());
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+  }
+  assert.equal(imports.length, importsBefore);
+  check('every section filters the picker and refuses files from other sections');
+
+  await openImport('gif');
+  await fileInput.setInputFiles(gifFile);
+  await dialog.getByRole('button', { name: 'Добавить', exact: true }).click();
+  await dialog.waitFor({ state: 'hidden' });
+  assert.equal(imports.at(-1).type, 'gif');
+  assert.deepEqual(imports.at(-1).payload, gif);
+
+  await openImport('gif');
+  await dialog.getByRole('button', { name: 'Видео → GIF', exact: true }).click();
+  assert.equal(await fileInput.getAttribute('accept'), '.mp4,.m4v,.mov,.webm');
+  await fileInput.setInputFiles(videoFile);
+  const start = dialog.getByLabel('Начало, сек.', { exact: true });
+  const convert = dialog.getByRole('button', { name: 'Преобразовать и добавить', exact: true });
+  await start.fill('30');
+  await convert.click();
+  await dialog.getByRole('alert').filter({ hasText: /начало фрагмента внутри видео/ }).waitFor();
+  assert.equal(imports.length, importsBefore + 1);
+  await start.fill('0.2');
+  await dialog.getByLabel('Длительность, сек.', { exact: true }).fill('0.5');
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
+  await page.screenshot({ path: path.join(output, 'video-to-gif-mobile.png') });
+  await convert.click();
+  await dialog.waitFor({ state: 'hidden' });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  assert.equal(imports.length, importsBefore + 2);
+  const animation = imports.at(-1);
+  assert.equal(animation.type, 'gif');
+  assert.equal(animation.name, 'clip.gif');
+  assert.equal(animation.payload.toString('ascii', 0, 6), 'GIF89a');
+  const frames = await page.evaluate(async bytes => {
+    const decoder = new ImageDecoder({ data: new Uint8Array(bytes), type: 'image/gif' });
+    try {
+      await decoder.tracks.ready;
+      const { image } = await decoder.decode({ frameIndex: 4 });
+      image.close();
+      return decoder.tracks.selectedTrack.frameCount;
+    } finally { decoder.close(); }
+  }, [...animation.payload]);
+  assert.equal(frames, 5);
+  check('GIF import accepts native GIFs and converts the selected video segment into an animated GIF before upload');
 }
 
 async function durationChecks() {

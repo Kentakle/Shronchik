@@ -5,6 +5,7 @@ $dotnetCommand = if (Test-Path -LiteralPath $localDotnet) { $localDotnet } else 
 $env:DOTNET_CLI_HOME = Join-Path $projectRoot '.tools/dotnet-home'
 $env:NUGET_PACKAGES = Join-Path $projectRoot '.cache/nuget'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+. (Join-Path $PSScriptRoot 'build-state.ps1')
 Push-Location $projectRoot
 try {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $projectRoot 'tests/build-freshness-smoke.ps1')
@@ -16,12 +17,7 @@ try {
         & $dotnetCommand (Join-Path $projectRoot "tests/$testProject/bin/Debug/net10.0/$testProject.dll")
         if ($LASTEXITCODE -ne 0) { throw "$testProject failed." }
     }
-    Push-Location (Join-Path $projectRoot 'src/Shronchik.Web')
-    try {
-        & npm.cmd run build
-        if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed.' }
-    }
-    finally { Pop-Location }
+    Build-ShronchikWeb -ProjectRoot $projectRoot
     & node tests/http-smoke.mjs
     if ($LASTEXITCODE -ne 0) { throw 'HTTP smoke failed.' }
     & node tests/security-smoke.mjs

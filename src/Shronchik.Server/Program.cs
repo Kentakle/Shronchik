@@ -575,6 +575,8 @@ app.MapPost("/api/v1/imports", async (HttpContext ctx) =>
     if (ctx.Request.ContentType?.StartsWith("multipart/", StringComparison.OrdinalIgnoreCase) == true)
         throw new ApiError(400, "single_file_required");
     if (ctx.Request.ContentLength is null or <= 0) throw new ApiError(400, "single_file_required");
+    var requestedType = ctx.Request.Query.TryGetValue("type", out var typeValues) ? typeValues.ToString() : null;
+    if (requestedType is not (null or "photo" or "video" or "gif")) throw new ApiError(400, "invalid_request");
     var name = Path.GetFileName(ctx.Request.Query["fileName"].ToString());
     var title = ctx.Request.Query["title"].FirstOrDefault();
     if (string.IsNullOrWhiteSpace(title)) title = Path.GetFileNameWithoutExtension(name);
@@ -602,7 +604,11 @@ app.MapPost("/api/v1/imports", async (HttpContext ctx) =>
         Directory.CreateDirectory(Path.GetDirectoryName(staging)!);
         var prefix = new byte[(int)Math.Min(64, ctx.Request.ContentLength.Value)];
         await ctx.Request.Body.ReadExactlyAsync(prefix, Cancel(ctx));
-        var (type, mime) = MediaInput.Identify(prefix, name);
+        var detected = MediaInput.Identify(prefix, name);
+        if (detected is null)
+            throw requestedType is null ? new ApiError(400, "invalid_request") : new ApiError(415, "unsupported_media_signature");
+        var (type, mime) = detected.Value;
+        if (requestedType is not null && type != requestedType) throw new ApiError(415, "media_type_mismatch");
         using var source = new PrefixStream(prefix, ctx.Request.Body);
         var info = await cipher.EncryptAsync(source, staging, Key(ctx), id, Cancel(ctx));
         if (info.Length != ctx.Request.ContentLength.Value) throw new ApiError(400, "incomplete_upload");
