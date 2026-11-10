@@ -1,0 +1,10 @@
+.tag-picker { border: 0; padding: 0; margin: 1.25rem 0; min-width: 0; }
+.tag-picker legend { font-weight: 600; margin-bottom: .65rem; }
+.tag-picker-selected, .tag-picker-options section > div { display: flex; flex-wrap: wrap; gap: .5rem; }
+.tag-picker button { border: 1px solid color-mix(in srgb, var(--color-muted) 30%, transparent); border-radius: .5rem; padding: .5rem .7rem; font-size: .9rem; }
+.tag-picker-selected button, .tag-picker button[aria-pressed="true"] { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 12%, transparent); border-color: var(--color-accent); }
+.tag-picker-selected { margin-bottom: .75rem; }
+.tag-picker-search { display: flex; gap: .5rem; }
+.tag-picker-search input { min-width: 0; flex: 1; }
+.tag-picker-options { max-height: 16rem; overflow: auto; overscroll-behavior: contain; padding: 0 .3rem .5rem 0; }
+.tag-picker-options h4 { color: var(--color-muted); font-size: .85rem; margin: 1rem 0 .5rem; }

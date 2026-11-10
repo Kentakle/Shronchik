@@ -1,0 +1,28 @@
+.modal[data-closing] {
+  animation-name: modal-exit;
+  animation-timing-function: ease-in;
+}
+
+.modal[data-closing]::backdrop {
+  animation: modal-backdrop-exit var(--duration-base) ease-in both;
+}
+
+@keyframes modal-exit {
+  from { opacity: var(--modal-close-opacity, 1); transform: var(--modal-close-transform, none); }
+  to { opacity: 0; transform: translateY(.35rem) scale(.99); }
+}
+
+@keyframes modal-backdrop-exit {
+  from { opacity: 1; backdrop-filter: blur(.5rem); }
+  to { opacity: 0; backdrop-filter: blur(0); }
+}
+
+:root[data-motion="on"] .modal[data-closing]::backdrop {
+  animation-duration: .01ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="off"]) .modal[data-closing]::backdrop {
+    animation-duration: .01ms;
+  }
+}

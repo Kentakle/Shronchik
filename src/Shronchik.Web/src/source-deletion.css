@@ -1,0 +1,11 @@
+.source-deletion-option { margin-top: 1rem; }
+.source-deletion-toggle { display: flex; align-items: flex-start; gap: .55rem; font-size: .85rem; line-height: 1.5; cursor: pointer; }
+.source-deletion-toggle > span { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+.source-deletion-option .source-deletion-toggle input[type="checkbox"] { width: 1rem; height: 1rem; padding: 0; margin: .15rem 0 0; flex-shrink: 0; accent-color: var(--color-accent); }
+.source-deletion-option input[type="checkbox"]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.source-deletion-toggle:has(input:disabled) { cursor: default; color: var(--color-muted); }
+.source-deletion-option > .help-text { margin: .45rem 0 0; font-size: .75rem; }
+.source-deletion-folder { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .35rem .75rem; margin-top: .5rem; font-size: .78rem; }
+.source-deletion-folder > span { overflow-wrap: anywhere; min-width: 0; }
+.source-deletion-folder > button { flex-shrink: 0; font-size: inherit; }
+.source-deletion-option > .error-text { margin-bottom: 0; font-size: .78rem; }

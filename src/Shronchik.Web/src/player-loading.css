@@ -1,0 +1,53 @@
+.player-stage video {
+  opacity: 1;
+  transition: opacity var(--duration-base) ease;
+}
+.player-stage[data-loading] video { opacity: 0; pointer-events: none; }
+.player-cover {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #08080c;
+  opacity: 0;
+  filter: blur(0);
+  transition: filter var(--duration-base) ease, opacity var(--duration-base) ease;
+}
+.player-stage[data-loading] .player-cover { opacity: 1; filter: blur(5px); }
+.player-processing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: .85rem;
+  pointer-events: none;
+  color: #f4f3f7;
+  background: rgb(8 8 12 / .2);
+  text-shadow: 0 1px 8px rgb(0 0 0 / .8);
+  font-size: .9rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-base) ease, visibility 0s var(--duration-base);
+}
+.player-stage[data-loading] .player-processing {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+.player-processing-dots { display: flex; align-items: center; gap: .45rem; height: 1.2rem; }
+.player-processing-dots > span {
+  width: .45rem;
+  height: .45rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .4;
+  animation: player-processing-pulse 1.2s ease-in-out infinite paused;
+}
+.player-processing-dots > span:nth-child(2) { animation-delay: .15s; }
+.player-processing-dots > span:nth-child(3) { animation-delay: .3s; }
+.player-stage[data-loading] .player-processing-dots > span { animation-play-state: running; }
+@keyframes player-processing-pulse {
+  0%, 70%, 100% { opacity: .4; transform: scale(.85); }
+  35% { opacity: 1; transform: scale(1.15); }
+}

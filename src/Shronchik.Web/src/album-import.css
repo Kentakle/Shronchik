@@ -1,0 +1,29 @@
+.album-import-intro { margin: -.5rem 0 1.25rem; }
+.album-import-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.album-import-files, .album-import-tags { min-width: 0; }
+.album-import-tags .tag-picker { margin: 0; }
+.album-import-modal input[type="file"].visually-hidden { width: 1px; height: 1px; padding: 0; border: 0; }
+.album-import-tags .tag-picker-options { max-height: min(22rem, 45dvh); }
+.album-import-summary { display: flex; justify-content: space-between; gap: 1rem; margin: 1rem 0 .5rem; font-size: .875rem; color: var(--color-muted); }
+.album-import-summary strong { color: var(--color-text); font-weight: 500; }
+.album-import-list { list-style: none; margin: 0; padding: 0; max-height: 21rem; overflow: auto; }
+.album-import-photo { display: flex; align-items: center; gap: .75rem; padding: .6rem 0; border-bottom: 1px solid var(--color-line); }
+.album-import-photo > img, .album-import-placeholder { width: 3.5rem; height: 3rem; object-fit: cover; flex-shrink: 0; border-radius: .4rem; background: var(--color-field); }
+.album-import-placeholder { display: grid; place-items: center; }
+.album-import-photo-info { min-width: 0; flex: 1; display: grid; gap: .2rem; }
+.album-import-photo-info strong { font-size: .85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.album-import-photo-info small { color: var(--color-muted); font-size: .75rem; overflow-wrap: anywhere; }
+.album-import-photo[data-status="done"] > svg, .album-import-photo[data-status="done"] small { color: var(--color-success); }
+.album-import-photo[data-status="error"] small { color: var(--color-error); }
+.album-import-photo[data-source-error] small { color: var(--color-error); }
+.album-import-progress { margin-top: 1.25rem; }
+.album-import-form .modal-actions { flex-wrap: wrap; }
+.import-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .625rem; flex-shrink: 0; }
+@media (max-width: 800px) {
+  .album-import-panels { grid-template-columns: minmax(0, 1fr); }
+  .album-import-tags .tag-picker-options { max-height: 16rem; }
+}
+@media (max-width: 600px) {
+  .home-intro .import-actions { width: 100%; }
+  .import-actions > button { flex: 1; }
+}

@@ -1,0 +1,27 @@
+.albums-section { min-width: 0; padding-block: .3rem 1.4rem; }
+.albums-section h2 { margin: .5rem 0 1rem; overflow-wrap: anywhere; font-size: 1.2rem; }
+.albums-heading { display: flex; justify-content: space-between; gap: .65rem; align-items: center; flex-wrap: wrap; }
+.albums-heading h2 { margin: 0; }
+.albums-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: .7rem;
+  margin-top: 1rem;
+}
+.album-card { min-width: 0; border: 1px solid var(--color-line); border-radius: var(--radius-card); background: var(--color-surface); }
+.album-open { display: flex; width: 100%; gap: .75rem; align-items: center; padding: .9rem; text-align: left; }
+.album-open > svg { color: var(--color-accent); }
+.album-open strong, .album-open small { display: block; overflow-wrap: anywhere; }
+.album-open small { margin-top: .25rem; color: var(--color-muted); }
+.album-actions { display: flex; justify-content: space-between; gap: .5rem; align-items: center; padding: .15rem .65rem .45rem; }
+.album-more { margin-top: 1rem; }
+.album-memberships { display: grid; gap: .4rem; max-height: min(15rem, 40dvh); overflow: auto; }
+.album-memberships:not(:empty) { margin-top: .75rem; }
+.album-memberships label { display: flex; gap: .65rem; align-items: center; padding: .5rem; background: var(--color-field); border-radius: .4rem; }
+.album-memberships label input[type="checkbox"] { width: 1rem; height: 1rem; flex: none; accent-color: var(--color-accent); }
+.album-memberships span { min-width: 0; overflow-wrap: anywhere; }
+.album-create-inline { display: flex; gap: .5rem; margin-top: .85rem; }
+.album-create-inline > button { flex: none; }
+@media (max-width: 520px) {
+  .album-create-inline { flex-direction: column; }
+}

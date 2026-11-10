@@ -1,0 +1,18 @@
+# Приватные медиа, пользовательские библиотеки и секреты
+*.srm
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.bak
+*.recovery
+*.key
+*.pem
+*.pfx
+.env
+.env.*
+library.json
+vault/
+thumbs/
+previews/
+trash/

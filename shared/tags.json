@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "groups": [
+    { "id": "race", "ru": "Раса", "en": "Race" },
+    { "id": "hairstyle", "ru": "Прическа", "en": "Hairstyle" },
+    { "id": "makeup", "ru": "Макияж", "en": "Makeup" },
+    { "id": "tattoos", "ru": "Тату", "en": "Tattoos" }
+  ],
+  "tags": [
+    { "id": "asia", "label": "Asia", "group": "race", "aliases": ["asian", "Asian performers", "Азиатские участники", "Азиаты", "Азиатки", "Азиатская категория"] },
+    { "id": "black", "label": "Black", "group": "race", "aliases": ["ebony", "Black performers", "Black category", "Темнокожие участники", "Темнокожие"] },
+    { "id": "white", "label": "White", "group": "race", "aliases": [] },
+    { "id": "latina", "label": "Latina", "group": "race", "aliases": [] },
+    { "id": "european", "label": "European", "group": "race", "aliases": [] },
+
+    { "id": "dark-hair", "label": "Dark hair", "group": "hairstyle", "aliases": ["brunette", "Тёмные волосы", "Темные волосы", "Брюнетка", "Брюнетки", "Брюнет"] },
+    { "id": "light-hair", "label": "Light hair", "group": "hairstyle", "aliases": ["blonde", "blond", "blondes", "Светлые волосы", "Блондинка", "Блондинки", "Блондин"] },
+
+    { "id": "with-makeup", "label": "With makeup", "group": "makeup", "aliases": ["С макияжем"] },
+    { "id": "without-makeup", "label": "Without makeup", "group": "makeup", "aliases": ["Без макияжа"] },
+
+    { "id": "with-tattoos", "label": "With tattoos", "group": "tattoos", "aliases": ["tattooed", "tattoo", "tattoos", "Татуировки", "Тату", "С тату", "С татуировками"] },
+    { "id": "without-tattoos", "label": "Without tattoos", "group": "tattoos", "aliases": ["Без тату", "Без татуировок"] }
+  ]
+}

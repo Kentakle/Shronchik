@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Shronchik.Core/Shronchik.Core.csproj" />
+    <Project Path="src/Shronchik.Server/Shronchik.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Shronchik.Core.Tests/Shronchik.Core.Tests.csproj" />
+    <Project Path="tests/Shronchik.Catalog.Tests/Shronchik.Catalog.Tests.csproj" />
+    <Project Path="tests/Shronchik.Session.Tests/Shronchik.Session.Tests.csproj" />
+  </Folder>
+</Solution>

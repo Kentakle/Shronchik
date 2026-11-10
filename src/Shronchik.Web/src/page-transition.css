@@ -1,0 +1,15 @@
+.page-transition {
+  animation: page-enter var(--page-transition-duration) ease-out both;
+}
+.page-transition[data-state="leaving"] {
+  animation: page-leave var(--page-transition-duration) ease-in both;
+  pointer-events: none;
+}
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(.4rem); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes page-leave {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-.25rem); }
+}

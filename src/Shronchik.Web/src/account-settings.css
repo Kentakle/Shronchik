@@ -1,0 +1,38 @@
+.account-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.managed-account {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .65rem 1rem;
+  padding: .85rem 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.managed-account-summary { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.managed-account-summary strong, .managed-account-summary small { display: block; overflow-wrap: anywhere; }
+.managed-account-summary small { color: var(--color-muted); }
+.managed-account-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: .5rem;
+  flex: none;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+.managed-account-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.managed-account-actions .secondary-button { padding-inline: .65rem; }
+.account-upload-permission { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+.account-settings .account-upload-permission input[type="checkbox"] {
+  width: 1.1rem; height: 1.1rem; padding: 0; margin: 0; accent-color: var(--color-accent); flex: none;
+}
+.settings-password > .account-upload-permission { margin-top: 1rem; }
+.managed-account-reset { flex-basis: 100%; min-width: 0; }
+.managed-account > .inline-confirm { flex-basis: 100%; padding-top: .25rem; }
+.managed-account-reset .managed-account-actions { justify-content: flex-end; margin-top: .65rem; }
+.account-settings > .error-text, .account-settings > .success-text { margin-block: .75rem; }

@@ -1,0 +1,27 @@
+:root {
+  --thumbnail-tags-line-height: 1rem;
+}
+
+.thumbnail-tags {
+  display: block;
+  min-width: 0;
+  height: var(--thumbnail-tags-line-height);
+  overflow: hidden;
+  pointer-events: none;
+}
+.thumbnail-tags-track {
+  display: flex;
+  width: max-content;
+  gap: .45rem;
+}
+.thumbnail-tag {
+  flex: none;
+  color: var(--color-muted);
+  font-size: .73rem;
+  line-height: var(--thumbnail-tags-line-height);
+  white-space: nowrap;
+}
+.thumbnail-tag[data-overflow] {
+  order: 1;
+  visibility: hidden;
+}
