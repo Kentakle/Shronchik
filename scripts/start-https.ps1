@@ -3,23 +3,29 @@ param(
     [ValidateRange(1024,65535)][int]$Port = 5271,
     [string]$LibraryPath = '',
     [switch]$NoBuild,
-    [switch]$Rebuild
+    [switch]$Rebuild,
+    [string]$Domain = ''
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
-if (-not $PublicIP) {
-    $configPath = Join-Path $projectRoot 'data/hosting/Caddyfile'
-    if (-not (Test-Path -LiteralPath $configPath)) {
-        throw 'No saved public IPv4 address. Run Start-Shronchik-Host.bat -PublicIP YOUR_PUBLIC_IP first.'
-    }
+$configPath = Join-Path $projectRoot 'data/hosting/Caddyfile'
+if (Test-Path -LiteralPath $configPath) {
     $savedConfig = Get-Content -LiteralPath $configPath -Raw
-    $savedAddress = [regex]::Match($savedConfig, '(?m)^https://([0-9.]+)\s*\{')
-    if (-not $savedAddress.Success) { throw 'No public IPv4 address found in data/hosting/Caddyfile. Supply -PublicIP.' }
-    $PublicIP = $savedAddress.Groups[1].Value
+    if (-not ($PublicIP -or $Domain)) {
+        $savedAddress = [regex]::Match($savedConfig, '(?m)^https://([a-zA-Z0-9.-]+)\s*\{')
+        if ($savedAddress.Success) {
+            $savedHost = $savedAddress.Groups[1].Value
+            if ($savedHost -match '^[0-9.]+$') { $PublicIP = $savedHost }
+            else { $Domain = $savedHost }
+        }
+    }
     if (-not $PSBoundParameters.ContainsKey('Port')) {
         $savedPort = [regex]::Match($savedConfig, '(?m)^\s*reverse_proxy 127\.0\.0\.1:([0-9]+)\s*\{')
         if ($savedPort.Success) { $Port = [int]$savedPort.Groups[1].Value }
     }
+}
+if (-not ($PublicIP -or $Domain)) {
+    throw 'No saved public address. Run Start-Shronchik-Host.bat -Domain YOUR_DOMAIN or -PublicIP YOUR_PUBLIC_IP.'
 }
 # Refuse before rebuilding or changing configuration for an already running host.
 $busyPorts = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 80,443,$Port,2019 })
@@ -33,7 +39,7 @@ if ($busyPorts.Count) {
         '. Close the local Shronchik window (Start-Shronchik.cmd) or the previous HTTPS host, then retry. ' +
         'Local and HTTPS instances cannot use the same library simultaneously.')
 }
-$prepared = & (Join-Path $PSScriptRoot 'prepare-https.ps1') -PublicIP $PublicIP -Port $Port
+$prepared = & (Join-Path $PSScriptRoot 'prepare-https.ps1') -PublicIP $PublicIP -Domain $Domain -Port $Port
 $libraryRoot = if ($LibraryPath) { [IO.Path]::GetFullPath($LibraryPath) } else { Join-Path $projectRoot 'data/library' }
 $env:SHRONCHIK_STORAGE_CONFIG = $libraryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + '.location.json'
 if (Test-Path -LiteralPath $env:SHRONCHIK_STORAGE_CONFIG) {
