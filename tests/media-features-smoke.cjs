@@ -229,15 +229,12 @@ async function sectionImportChecks(page, output) {
   await openImport('gif');
   await dialog.getByRole('button', { name: 'Видео → GIF', exact: true }).click();
   assert.equal(await fileInput.getAttribute('accept'), '.mp4,.m4v,.mov,.webm');
-  await fileInput.setInputFiles(videoFile);
-  const start = dialog.getByLabel('Начало, сек.', { exact: true });
   const convert = dialog.getByRole('button', { name: 'Преобразовать и добавить', exact: true });
-  await start.fill('30');
+  await fileInput.setInputFiles({ ...videoFile, buffer: Buffer.from('invalid video') });
   await convert.click();
-  await dialog.getByRole('alert').filter({ hasText: /начало фрагмента внутри видео/ }).waitFor();
+  await dialog.getByRole('alert').filter({ hasText: /Не удалось преобразовать/ }).waitFor();
   assert.equal(imports.length, importsBefore + 1);
-  await start.fill('0.2');
-  await dialog.getByLabel('Длительность, сек.', { exact: true }).fill('0.5');
+  await fileInput.setInputFiles(videoFile);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
   await page.screenshot({ path: path.join(output, 'video-to-gif-mobile.png') });
@@ -249,17 +246,70 @@ async function sectionImportChecks(page, output) {
   assert.equal(animation.type, 'gif');
   assert.equal(animation.name, 'clip.gif');
   assert.equal(animation.payload.toString('ascii', 0, 6), 'GIF89a');
-  const frames = await page.evaluate(async bytes => {
+  assert.ok((await readGif(page, animation.payload)).frameCount > 5);
+  check('GIF import accepts native GIFs and decodes MP4 frames before uploading an animation');
+
+  await openImport('gif');
+  await dialog.getByRole('button', { name: 'Видео → GIF', exact: true }).click();
+  const video = await makeFullLengthVideo(page);
+  await fileInput.setInputFiles({ name: 'full-length.webm', mimeType: 'video/webm', buffer: video });
+  await convert.click();
+  await dialog.waitFor({ state: 'hidden', timeout: 60_000 });
+  assert.equal(imports.length, importsBefore + 3);
+  assert.equal(imports.at(-1).name, 'full-length.gif');
+  assert.equal(imports.at(-1).type, 'gif');
+  const decoded = await readGif(page, imports.at(-1).payload);
+  assert.equal(decoded.frameCount, 288);
+  assert.equal(decoded.width, 512);
+  assert.equal(decoded.height, 288);
+  assert.equal(decoded.duration, 12_000_000);
+  assert.ok(decoded.lastPixel[2] > 200 && decoded.lastPixel[0] < 80, 'final source frame is present');
+  check('12-second WebM converts at 512 × 288 with all 288 frames and the original playback duration');
+}
+
+async function makeFullLengthVideo(page) {
+  const library = path.join(root, 'src/Shronchik.Web/node_modules/mediabunny/dist/bundles/mediabunny.mjs');
+  await page.route('**/test/mediabunny.mjs', route => route.fulfill({ path: library, contentType: 'text/javascript' }));
+  const bytes = await page.evaluate(async () => {
+    const { BufferTarget, CanvasSource, Output, WebMOutputFormat } = await import('/test/mediabunny.mjs');
+    const canvas = new OffscreenCanvas(512, 288);
+    const context = canvas.getContext('2d');
+    const target = new BufferTarget();
+    const output = new Output({ format: new WebMOutputFormat(), target });
+    const source = new CanvasSource(canvas, { codec: 'vp8', bitrate: 1_000_000 });
+    const frameRate = 24;
+    output.addVideoTrack(source, { frameRate });
+    await output.start();
+    for (let frame = 0; frame < 12 * frameRate; frame++) {
+      context.fillStyle = frame < 11 * frameRate ? '#fa3322' : '#2233fa';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = 'white';
+      context.fillRect(frame, 20, 20, 20);
+      await source.add(frame / frameRate, 1 / frameRate);
+    }
+    await output.finalize();
+    return [...new Uint8Array(target.buffer)];
+  });
+  return Buffer.from(bytes);
+}
+
+function readGif(page, payload) {
+  return page.evaluate(async bytes => {
     const decoder = new ImageDecoder({ data: new Uint8Array(bytes), type: 'image/gif' });
     try {
       await decoder.tracks.ready;
-      const { image } = await decoder.decode({ frameIndex: 4 });
-      image.close();
-      return decoder.tracks.selectedTrack.frameCount;
+      const { frameCount } = decoder.tracks.selectedTrack;
+      const { image } = await decoder.decode({ frameIndex: frameCount - 1 });
+      try {
+        const context = new OffscreenCanvas(1, 1).getContext('2d');
+        context.drawImage(image, 0, 0, 1, 1, 0, 0, 1, 1);
+        return {
+          frameCount, width: image.displayWidth, height: image.displayHeight,
+          duration: image.timestamp + image.duration, lastPixel: [...context.getImageData(0, 0, 1, 1).data],
+        };
+      } finally { image.close(); }
     } finally { decoder.close(); }
-  }, [...animation.payload]);
-  assert.equal(frames, 5);
-  check('GIF import accepts native GIFs and converts the selected video segment into an animated GIF before upload');
+  }, [...payload]);
 }
 
 async function durationChecks() {

@@ -9,7 +9,7 @@ function operationSignal({ signal, timeoutMs }: CaptureOptions, defaultTimeout: 
   return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-export function waitForMediaEvent(target: HTMLVideoElement | HTMLImageElement, event: string, signal: AbortSignal, start: () => void) {
+function waitForMediaEvent(target: HTMLVideoElement | HTMLImageElement, event: string, signal: AbortSignal, start: () => void) {
   signal.throwIfAborted();
   return new Promise<void>((resolve, reject) => {
     const ready = () => { cleanup(); resolve(); };
@@ -28,7 +28,7 @@ export function waitForMediaEvent(target: HTMLVideoElement | HTMLImageElement, e
   });
 }
 
-export function finiteDuration(video: HTMLVideoElement) {
+function finiteDuration(video: HTMLVideoElement) {
   return Number.isFinite(video.duration) && video.duration > 0 ? video.duration : null;
 }
 

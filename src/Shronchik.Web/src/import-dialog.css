@@ -45,12 +45,6 @@
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
   border-color: var(--color-accent);
 }
-.gif-import-range {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: end;
-  gap: .65rem;
-}
 .import-panels .tag-picker { margin: 0; }
 .import-panels .tag-picker-selected:empty { display: none; }
 .import-panels .tag-picker-options { max-height: min(18rem, 35dvh); }

@@ -11,7 +11,7 @@ import { SourceDeletionOption } from './SourceDeletionOption';
 import { deleteImportedSource, prepareSource } from './sourceDeletion';
 import type { PreparedSource, SourceDirectory } from './sourceDeletion';
 import type { ImportedMedia, Language, Media, MediaType } from './types';
-import { GifStartError, maxGifSeconds, maxGifSide, videoToGif } from './videoToGif';
+import { videoToGif } from './videoToGif';
 import './import-dialog.css';
 import './modal-motion.css';
 
@@ -106,8 +106,6 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
   const [error, setError] = useState('');
   const [progress, setProgress] = useState<number | null>(null);
   const [convertVideo, setConvertVideo] = useState(false);
-  const [gifStart, setGifStart] = useState('0');
-  const [gifSeconds, setGifSeconds] = useState(String(maxGifSeconds));
   const [conversionProgress, setConversionProgress] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [objectSource, setObjectSource] = useState<{ file: File; url: string } | null>(null);
@@ -148,7 +146,6 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
     setTitle(next ? next.name.replace(/\.[^.]+$/, '') : '');
     setPoster(null);
     setPosterPending(false);
-    setGifStart('0');
   }
   function choose(files: FileList | null) {
     if (!files?.length) return;
@@ -256,10 +253,9 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
         cancelRef.current = () => controller.abort();
         setConversionProgress(0);
         try {
-          uploadFile = await videoToGif(file, { start: Number(gifStart), seconds: Number(gifSeconds),
-            signal: controller.signal, onProgress: setConversionProgress });
-        } catch (err) {
-          if (!stopped.current) setError(err instanceof GifStartError ? t.gifStartInvalid : t.gifConversionError);
+          uploadFile = await videoToGif(file, { signal: controller.signal, onProgress: setConversionProgress });
+        } catch {
+          if (!stopped.current) setError(t.gifConversionError);
           return;
         } finally {
           if (!stopped.current) setConversionProgress(null);
@@ -319,22 +315,8 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
           </button>
           <input ref={input} className="visually-hidden" type="file" accept={formats.extensions.join(',')} aria-label={t.chooseFile}
             onChange={event => { choose(event.target.files); event.target.value = ''; }} disabled={lockedFields}/>
-          {convertVideo ? <p className="help-text">{text(
-            `Видео преобразуется в браузере. До ${maxGifSeconds} сек. и ${maxGifSide} пикселей по длинной стороне.`,
-            `Video is converted in your browser. Up to ${maxGifSeconds} seconds and ${maxGifSide} pixels on the longest side.`)}</p>
+          {convertVideo ? <p className="help-text">{t.gifConversionHelp}</p>
             : !sourceDirectory && <p className="help-text import-help"><Icon name="shield" size={16}/>{t.importHelp}</p>}
-          {convertVideo && file && <div className="gif-import-range">
-            <div>
-              <label className="field-label" htmlFor="gif-start">{t.gifStart}</label>
-              <input id="gif-start" type="number" min={0} step="any" value={gifStart} required
-                onChange={event => { setGifStart(event.target.value); setError(''); }} disabled={lockedFields}/>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="gif-seconds">{t.gifSeconds}</label>
-              <input id="gif-seconds" type="number" min={0.1} max={maxGifSeconds} step="any" value={gifSeconds} required
-                onChange={event => { setGifSeconds(event.target.value); setError(''); }} disabled={lockedFields}/>
-            </div>
-          </div>}
           {!convertVideo && allowSourceDeletion && <SourceDeletionOption language={language} directory={sourceDirectory} onChange={setSourceDirectory}
             disabled={lockedFields} onBusyChange={setPickingDirectory}/>}
           <label className="field-label" htmlFor="import-title">{t.title}</label>
