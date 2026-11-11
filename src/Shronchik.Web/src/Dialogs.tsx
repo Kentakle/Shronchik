@@ -11,7 +11,6 @@ import { SourceDeletionOption } from './SourceDeletionOption';
 import { deleteImportedSource, prepareSource } from './sourceDeletion';
 import type { PreparedSource, SourceDirectory } from './sourceDeletion';
 import type { ImportedMedia, Language, Media, MediaType } from './types';
-import { videoToGif } from './videoToGif';
 import './import-dialog.css';
 import './modal-motion.css';
 
@@ -105,8 +104,7 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
   const [tags, setTags] = useState('');
   const [error, setError] = useState('');
   const [progress, setProgress] = useState<number | null>(null);
-  const [convertVideo, setConvertVideo] = useState(false);
-  const [conversionProgress, setConversionProgress] = useState<number | null>(null);
+  const [converting, setConverting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [objectSource, setObjectSource] = useState<{ file: File; url: string } | null>(null);
   const [poster, setPoster] = useState<Blob | null>(null);
@@ -136,32 +134,23 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
     return () => URL.revokeObjectURL(url);
   }, [file, isVideo]);
   const source = objectSource && objectSource.file === file ? objectSource.url : '';
-  const displayProgress = conversionProgress ?? progress;
-  const busy = displayProgress !== null || savingPoster || checkingSource || deletingSource || pickingDirectory;
-  const fileType = convertVideo ? 'video' : type;
-  const formats = importFormats[fileType];
+  const convertVideo = type === 'gif' && file !== null && acceptsImportFile(file, 'video');
+  const busy = converting || progress !== null || savingPoster || checkingSource || deletingSource || pickingDirectory;
+  const formats = importFormats[type];
   const text = (ru: string, en: string) => language === 'ru' ? ru : en;
-  function selectFile(next: File | null) {
-    setFile(next);
-    setTitle(next ? next.name.replace(/\.[^.]+$/, '') : '');
-    setPoster(null);
-    setPosterPending(false);
-  }
   function choose(files: FileList | null) {
     if (!files?.length) return;
     let reason = '';
     if (files.length !== 1) reason = t.oneFile;
-    else if (!acceptsImportFile(files[0], fileType)) reason = convertVideo ? t.gifVideoRequired : t.importTypeMismatch;
+    else if (!acceptsImportFile(files[0], type)) reason = t.importTypeMismatch;
     else if (files[0].size === 0) reason = t.emptyImportFile;
     setError(reason);
-    selectFile(reason ? null : files[0]);
-  }
-  function changeMode(convert: boolean) {
-    if (convertVideo === convert) return;
-    setConvertVideo(convert);
-    setSourceDirectory(null);
-    setError('');
-    selectFile(null);
+    const next = reason ? null : files[0];
+    if (type === 'gif' && next && acceptsImportFile(next, 'video')) setSourceDirectory(null);
+    setFile(next);
+    setTitle(next ? next.name.replace(/\.[^.]+$/, '') : '');
+    setPoster(null);
+    setPosterPending(false);
   }
   function close() {
     stopped.current = true;
@@ -251,14 +240,15 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
       if (convertVideo) {
         const controller = new AbortController();
         cancelRef.current = () => controller.abort();
-        setConversionProgress(0);
+        setConverting(true);
         try {
-          uploadFile = await videoToGif(file, { signal: controller.signal, onProgress: setConversionProgress });
+          const { videoToGif } = await import('./videoToGif');
+          uploadFile = await videoToGif(file, controller.signal);
         } catch {
           if (!stopped.current) setError(t.gifConversionError);
           return;
         } finally {
-          if (!stopped.current) setConversionProgress(null);
+          if (!stopped.current) setConverting(false);
         }
       }
       if (stopped.current) return;
@@ -293,12 +283,6 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
       <div className="import-panels">
         <section className="import-pane import-pane-file" aria-labelledby="import-file-heading">
           <h3 className="import-pane-title" id="import-file-heading">{t.file}</h3>
-          {type === 'gif' && <div className="import-mode">
-            <button type="button" className="secondary-button small" aria-pressed={!convertVideo} disabled={lockedFields}
-              onClick={() => changeMode(false)}>{t.uploadGif}</button>
-            <button type="button" className="secondary-button small" aria-pressed={convertVideo} disabled={lockedFields}
-              onClick={() => changeMode(true)}>{t.convertGif}</button>
-          </div>}
           <button type="button" className={`drop-zone ${dragging ? 'dragging' : ''} ${file ? 'has-file' : ''}`}
             disabled={lockedFields} onClick={() => input.current?.click()}
             onDragOver={event => { event.preventDefault(); if (!lockedFields) setDragging(true); }}
@@ -315,15 +299,15 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
           </button>
           <input ref={input} className="visually-hidden" type="file" accept={formats.extensions.join(',')} aria-label={t.chooseFile}
             onChange={event => { choose(event.target.files); event.target.value = ''; }} disabled={lockedFields}/>
-          {convertVideo ? <p className="help-text">{t.gifConversionHelp}</p>
-            : !sourceDirectory && <p className="help-text import-help"><Icon name="shield" size={16}/>{t.importHelp}</p>}
+          {convertVideo && progress === null && <p className="help-text" role="status">{converting ? t.gifConverting : t.gifConversionHelp}</p>}
+          {!convertVideo && !sourceDirectory && <p className="help-text import-help"><Icon name="shield" size={16}/>{t.importHelp}</p>}
           {!convertVideo && allowSourceDeletion && <SourceDeletionOption language={language} directory={sourceDirectory} onChange={setSourceDirectory}
             disabled={lockedFields} onBusyChange={setPickingDirectory}/>}
           <label className="field-label" htmlFor="import-title">{t.title}</label>
           <input id="import-title" value={title} maxLength={200} onChange={event => setTitle(event.target.value)} disabled={lockedFields} required/>
-          {displayProgress !== null && <div className="upload-progress" role="status">
-            <div><span>{conversionProgress !== null ? t.gifConverting : progress === 100 ? t.encrypting : t.uploading}</span><strong>{displayProgress}%</strong></div>
-            <progress max={100} value={displayProgress}/>
+          {progress !== null && <div className="upload-progress" role="status">
+            <div><span>{progress === 100 ? t.encrypting : t.uploading}</span><strong>{progress}%</strong></div>
+            <progress max={100} value={progress}/>
           </div>}
           {savingPoster && <p className="help-text" role="status">{text('Сохраняем обложку…', 'Saving the cover…')}</p>}
           {checkingSource && <p className="help-text" role="status">{text('Проверяем оригинал…', 'Checking the original…')}</p>}
@@ -343,7 +327,7 @@ export function ImportDialog({ type, t, language, thumbnailCandidates, allowSour
         <button className="primary-button" disabled={busy || !file || posterPending || (isVideo && !source)}>
           {busy ? <span className="spinner"/> : <Icon name={imported ? 'check' : 'plus'} size={18}/>}
           {imported ? (poster && !coverSaved ? t.retry : sourceToDelete.current ? text('Повторить удаление', 'Retry deletion') : text('Готово', 'Done'))
-            : convertVideo ? t.convertAndImport : t.importShort}
+            : t.importShort}
         </button>
       </div>
     </form>

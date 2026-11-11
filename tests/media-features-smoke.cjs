@@ -1,6 +1,7 @@
 // Browser regressions against synthetic APIs and media only. Build the UI first.
 // SHRONCHIK_PLAYWRIGHT must point to an installed Playwright package.
 const assert = require('node:assert/strict');
+const { once } = require('node:events');
 const http = require('node:http');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -22,6 +23,8 @@ const cards = [item('clip-one'), item('clip-two')];
 const requests = [], imports = [], errors = [];
 let role = 'Admin', locked = false, playId = 0, played = 0, activeImports = 0, maxImports = 0;
 let failOnce = '', importDelay = 40;
+let wasmRequests = 0;
+let wasmGate;
 
 async function createServer() {
   const server = http.createServer(async (request, response) => {
@@ -80,8 +83,15 @@ async function createServer() {
       }
       const file = path.resolve(webRoot, '.' + (url.pathname === '/' || url.pathname === '/video' ? '/index.html' : url.pathname));
       if (!file.startsWith(webRoot + path.sep)) { response.writeHead(403).end(); return; }
+      const types = { '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.html': 'text/html' };
+      if (file.endsWith('.wasm')) {
+        wasmRequests++;
+        await wasmGate;
+      }
       const data = await fs.readFile(file);
-      response.writeHead(200, { 'Content-Type': file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html' }).end(data);
+      const wasmWorker = url.pathname.startsWith('/assets/workers/');
+      response.writeHead(200, { 'Content-Type': types[path.extname(file)],
+        'Content-Security-Policy': `script-src 'self'${wasmWorker ? " 'wasm-unsafe-eval'" : ''}` }).end(data);
     } catch (error) {
       if (error.code !== 'ENOENT' && error.code !== 'ECONNRESET') errors.push(String(error));
       if (!response.headersSent) response.writeHead(500);
@@ -201,13 +211,13 @@ async function sectionImportChecks(page, output) {
   };
   const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
   const pngFile = { name: 'photo.png', mimeType: 'image/png', buffer: png };
-  const videoFile = { name: 'clip.mp4', mimeType: 'video/mp4', buffer: clip };
+  const videoFile = { name: 'clip.MP4', mimeType: 'application/octet-stream', buffer: clip };
   const gifFile = { name: 'ready.gif', mimeType: 'image/gif', buffer: gif };
   const importsBefore = imports.length;
   for (const [type, extensions, file] of [
     ['photo', '.png,.jpg,.jpeg,.webp', gifFile],
     ['video', '.mp4,.m4v,.mov,.webm', pngFile],
-    ['gif', '.gif', videoFile],
+    ['gif', '.gif,.mp4,.m4v,.mov,.webm', pngFile],
   ]) {
     await openImport(type);
     assert.equal(await fileInput.getAttribute('accept'), extensions);
@@ -219,26 +229,48 @@ async function sectionImportChecks(page, output) {
   assert.equal(imports.length, importsBefore);
   check('every section filters the picker and refuses files from other sections');
 
+  const add = dialog.getByRole('button', { name: 'Добавить', exact: true });
+  const conversionHint = dialog.getByRole('status').filter({ hasText: 'Видео будет добавлено как GIF.' });
   await openImport('gif');
   await fileInput.setInputFiles(gifFile);
-  await dialog.getByRole('button', { name: 'Добавить', exact: true }).click();
+  assert.equal(await conversionHint.count(), 0);
+  await add.click();
   await dialog.waitFor({ state: 'hidden' });
   assert.equal(imports.at(-1).type, 'gif');
   assert.deepEqual(imports.at(-1).payload, gif);
+  assert.equal(wasmRequests, 0);
 
   await openImport('gif');
-  await dialog.getByRole('button', { name: 'Видео → GIF', exact: true }).click();
-  assert.equal(await fileInput.getAttribute('accept'), '.mp4,.m4v,.mov,.webm');
-  const convert = dialog.getByRole('button', { name: 'Преобразовать и добавить', exact: true });
+  await fileInput.setInputFiles(videoFile);
+  let releaseWasm;
+  wasmGate = new Promise(resolve => { releaseWasm = resolve; });
+  try {
+    const startingWorker = page.waitForEvent('worker');
+    await add.click();
+    const closingWorker = once(await startingWorker, 'close', { signal: AbortSignal.timeout(5000) });
+    await dialog.getByRole('status').filter({ hasText: 'Преобразуем видео в GIF…' }).waitFor();
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await closingWorker;
+    await dialog.waitFor({ state: 'hidden' });
+    assert.equal(imports.length, importsBefore + 1);
+  } finally {
+    releaseWasm();
+    wasmGate = undefined;
+  }
+  check('cancel during conversion stops the worker before any upload');
+
+  await openImport('gif');
   await fileInput.setInputFiles({ ...videoFile, buffer: Buffer.from('invalid video') });
-  await convert.click();
+  await conversionHint.waitFor();
+  assert.equal(await dialog.getByRole('button', { name: 'Видео → GIF', exact: true }).count(), 0);
+  await add.click();
   await dialog.getByRole('alert').filter({ hasText: /Не удалось преобразовать/ }).waitFor();
   assert.equal(imports.length, importsBefore + 1);
   await fileInput.setInputFiles(videoFile);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
   await page.screenshot({ path: path.join(output, 'video-to-gif-mobile.png') });
-  await convert.click();
+  await add.click();
   await dialog.waitFor({ state: 'hidden' });
   await page.setViewportSize({ width: 1440, height: 1000 });
   assert.equal(imports.length, importsBefore + 2);
@@ -247,13 +279,19 @@ async function sectionImportChecks(page, output) {
   assert.equal(animation.name, 'clip.gif');
   assert.equal(animation.payload.toString('ascii', 0, 6), 'GIF89a');
   assert.ok((await readGif(page, animation.payload)).frameCount > 5);
-  check('GIF import accepts native GIFs and decodes MP4 frames before uploading an animation');
+  check('GIF import uploads native GIFs unchanged and automatically converts MP4 after Add');
 
   await openImport('gif');
-  await dialog.getByRole('button', { name: 'Видео → GIF', exact: true }).click();
   const video = await makeFullLengthVideo(page);
-  await fileInput.setInputFiles({ name: 'full-length.webm', mimeType: 'video/webm', buffer: video });
-  await convert.click();
+  const transfer = await page.evaluateHandle(bytes => {
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(bytes)], 'full-length.webm', { type: 'video/webm' }));
+    return data;
+  }, [...video]);
+  await dialog.locator('.drop-zone').dispatchEvent('drop', { dataTransfer: transfer });
+  await transfer.dispose();
+  await conversionHint.waitFor();
+  await add.click();
   await dialog.waitFor({ state: 'hidden', timeout: 60_000 });
   assert.equal(imports.length, importsBefore + 3);
   assert.equal(imports.at(-1).name, 'full-length.gif');

@@ -34,17 +34,6 @@
   font-size: 1rem;
   font-weight: 600;
 }
-.import-mode {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .45rem;
-  margin-bottom: .65rem;
-}
-.import-mode button[aria-pressed="true"] {
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  border-color: var(--color-accent);
-}
 .import-panels .tag-picker { margin: 0; }
 .import-panels .tag-picker-selected:empty { display: none; }
 .import-panels .tag-picker-options { max-height: min(18rem, 35dvh); }

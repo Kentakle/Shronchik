@@ -100,7 +100,11 @@ app.Use(async (ctx, next) =>
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
         ctx.Response.Headers["X-Frame-Options"] = "DENY";
         ctx.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
-        ctx.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'";
+        // FFmpeg compiles WebAssembly under its worker script's policy.
+        var workerScript = ctx.Request.Path.StartsWithSegments("/assets/workers")
+            && ctx.Request.Path.Value!.EndsWith(".js", StringComparison.Ordinal);
+        var scriptSources = workerScript ? "'self' 'wasm-unsafe-eval'" : "'self'";
+        ctx.Response.Headers["Content-Security-Policy"] = $"default-src 'self'; script-src {scriptSources}; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'";
         return Task.CompletedTask;
     });
     try

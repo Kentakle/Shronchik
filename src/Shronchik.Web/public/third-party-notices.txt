@@ -1,12 +1,7 @@
-Mediabunny 1.65.2
-Mozilla Public License 2.0
-Copyright (c) 2026-present, Vanilagy and contributors
-Source: https://github.com/Vanilagy/mediabunny/tree/173f6b70765fa3a6ffc1c82737514416fa559ef5
-License: https://www.mozilla.org/MPL/2.0/
-
-gifenc 1.0.3
-The MIT License (MIT)
-Copyright (c) 2017 Matt DesLauriers
+@ffmpeg/ffmpeg 0.12.15
+MIT License
+Copyright (c) 2019 Jerome Wu
+Source: https://github.com/ffmpegwasm/ffmpeg.wasm/tree/v12.15/packages/ffmpeg
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,3 +20,10 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 OR OTHER DEALINGS IN THE SOFTWARE.
+
+@ffmpeg/core 0.12.10
+GNU General Public License, version 2 or later
+License: /ffmpeg-gpl-2.0.txt
+FFmpeg source: https://github.com/FFmpeg/FFmpeg/tree/n5.1.4
+WebAssembly bindings and build scripts: https://github.com/ffmpegwasm/ffmpeg.wasm/tree/v12.15
+Build dependencies and source revisions: https://github.com/ffmpegwasm/ffmpeg.wasm/blob/v12.15/Dockerfile
